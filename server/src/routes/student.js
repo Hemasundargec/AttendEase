@@ -70,7 +70,12 @@ export function studentRoutes({ users, subjects, attendance, todos, timetable, m
     if (problem) return res.status(400).json({ message: problem })
     const list = await mySubjects(req)
     if (list.length === 0) return res.status(400).json({ message: 'No subjects are set up for your semester yet.' })
-    const result = validateDailyEntries(req.body, list.map((s) => s.id))
+    // Periods the student scheduled for this weekday; null means no timetable for that day (then only the basic rules apply).
+    const dow = new Date(`${req.params.date}T00:00:00Z`).getUTCDay() || 7
+    const table = timetable ? await timetable.get(req.user.id, req.user.semester) : null
+    const scheduled = ((table && table[String(dow)]) || []).filter((id) => list.some((x) => x.id === id))
+    const periodCounts = scheduled.length ? scheduled.reduce((m, id) => ({ ...m, [id]: (m[id] || 0) + 1 }), {}) : null
+    const result = validateDailyEntries(req.body, list.map((s) => s.id), { periodCounts })
     if (!result.ok) return res.status(400).json({ message: result.message, rowErrors: result.rowErrors })
     const saved = await attendance.upsertMany(req.user.id, req.user.semester, req.params.date, result.rows)
     res.json({ message: 'Attendance saved.', saved: saved.length })

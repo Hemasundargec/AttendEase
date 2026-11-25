@@ -48,7 +48,11 @@ export default function MarkAttendance() {
     return () => { cancelled = true }
   }, [date])
 
-  const set = (id, field) => (e) => setRows((r) => ({ ...r, [id]: { ...r[id], [field]: e.target.value.trim() } }))
+  const set = (id, field) => (e) => {
+    const value = e.target.value.trim()
+    setRows((r) => ({ ...r, [id]: { ...r[id], [field]: value } }))
+    setErrors((x) => { if (!x[id]) return x; const { [id]: _gone, ...rest } = x; return rest }) // editing a box clears its old message
+  }
 
   // Live total over rows that are valid right now (display only; the server recalculates everything).
   const totals = useMemo(() => {
@@ -60,6 +64,15 @@ export default function MarkAttendance() {
   }, [rows])
 
   const periods = day?.periods || []
+  // With a timetable for this weekday, a subject can have at most as many classes as it has periods.
+  const capFor = (id) => (periods.length ? periods.filter((x) => x === id).length : 20)
+  const liveError = (id) => {
+    const r = rows[id]
+    if (!r) return ''
+    if (isCount(r.conducted) && Number(r.conducted) > capFor(id)) return periods.length ? `Your timetable has only ${capFor(id)} class${capFor(id) === 1 ? '' : 'es'} of this subject today.` : ''
+    if (isCount(r.conducted) && isCount(r.attended) && Number(r.attended) > Number(r.conducted)) return 'Attended cannot be more than conducted.'
+    return ''
+  }
   const tickTotals = useMemo(() => ({ conducted: ticks.filter((t) => t.held).length, attended: ticks.filter((t) => t.held && t.att).length }), [ticks])
   const shown = mode === 'ticks' ? tickTotals : totals
   const setTick = (i, patch) => { setTicks((t) => t.map((x, k) => (k === i ? { ...x, ...patch } : x))); setNotice(null) }
@@ -93,13 +106,15 @@ export default function MarkAttendance() {
     for (const s of day.subjects) {
       const r = rows[s.id]
       if (r.conducted === '' && r.attended === '') continue // left blank: stays "not entered"
-      if (!isCount(r.conducted)) found[s.id] = 'Classes conducted must be a whole number from 0 to 20.'
+      if (liveError(s.id)) found[s.id] = liveError(s.id)
+      else if (!isCount(r.conducted)) found[s.id] = 'Classes conducted must be a whole number from 0 to 20.'
       else if (!isCount(r.attended)) found[s.id] = 'Classes attended must be a whole number from 0 to 20.'
       else if (Number(r.attended) > Number(r.conducted)) found[s.id] = 'Attended cannot be more than conducted.'
       else entries.push({ subjectId: s.id, conducted: Number(r.conducted), attended: Number(r.attended) })
     }
     setErrors(found)
     if (Object.keys(found).length) { setNotice({ kind: 'err', text: 'Please fix the highlighted subjects.' }); return }
+    if (entries.reduce((t, e) => t + e.conducted, 0) > 10) { setNotice({ kind: 'err', text: 'A day can have at most 10 classes in total.' }); return }
     if (entries.length === 0) { setNotice({ kind: 'err', text: 'Enter at least one subject before saving.' }); return }
     setBusy(true)
     const res = await api(`/api/student/attendance/day/${date}`, { method: 'PUT', body: { entries } })
@@ -174,7 +189,7 @@ export default function MarkAttendance() {
         <form onSubmit={onSubmit} noValidate>
           <ul className="subject-list">
             {day.subjects.map((s) => {
-              const err = errors[s.id]
+              const err = errors[s.id] || liveError(s.id)
               return (
                 <li key={s.id} className="card subject-row">
                   <div>
@@ -184,12 +199,12 @@ export default function MarkAttendance() {
                   <div className="pair">
                     <div className="field">
                       <label htmlFor={`c-${s.id}`}>Conducted</label>
-                      <input id={`c-${s.id}`} type="number" inputMode="numeric" min="0" max="20" step="1" value={rows[s.id]?.conducted ?? ''} onChange={set(s.id, 'conducted')}
+                      <input id={`c-${s.id}`} type="number" inputMode="numeric" min="0" max={capFor(s.id)} step="1" value={rows[s.id]?.conducted ?? ''} onChange={set(s.id, 'conducted')}
                         aria-invalid={Boolean(err)} aria-describedby={err ? `e-${s.id}` : undefined} />
                     </div>
                     <div className="field">
                       <label htmlFor={`a-${s.id}`}>Attended</label>
-                      <input id={`a-${s.id}`} type="number" inputMode="numeric" min="0" max="20" step="1" value={rows[s.id]?.attended ?? ''} onChange={set(s.id, 'attended')}
+                      <input id={`a-${s.id}`} type="number" inputMode="numeric" min="0" max={isCount(rows[s.id]?.conducted ?? '') ? Number(rows[s.id].conducted) : capFor(s.id)} step="1" value={rows[s.id]?.attended ?? ''} onChange={set(s.id, 'attended')}
                         aria-invalid={Boolean(err)} aria-describedby={err ? `e-${s.id}` : undefined} />
                     </div>
                   </div>

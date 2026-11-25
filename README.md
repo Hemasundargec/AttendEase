@@ -118,3 +118,19 @@ Only values that are safe to be public may start with `VITE_`; they are baked in
 ## Your own subjects and timetable
 
 After logging in, a student opens **Timetable** to add their own subjects (private to them, up to 15 per semester) and set the periods for each weekday. On **Mark**, today's periods appear as rows: tick **Class happened**, then **I attended**. Ticks are saved as conducted/attended counts, so Statistics, Prediction and reminders work unchanged. "Enter numbers instead" is still available. Administrator-added subjects for a branch and semester still appear too.
+
+## Getting updates (no zip needed)
+
+The code lives at https://github.com/Hemasundargec/AttendEase. After the one-time `git clone`, update with:
+
+```
+cd "E:\AE DASARA CLAUDE\attendease"
+git pull
+npm run install:all     # only needed if package.json changed
+```
+then restart `npm run dev:server` and `npm run dev:client`. If `git pull` says you have local changes, run `git stash` first (or `git checkout -- .` to discard them).
+
+## Attendance rules (enforced on the page and the server)
+- Attended can never be more than conducted; counts are whole numbers.
+- If your timetable has classes for that weekday, a subject cannot have more classes conducted than periods scheduled, and a subject not on that day's timetable cannot be counted.
+- At most 10 classes in total per day; no future dates.

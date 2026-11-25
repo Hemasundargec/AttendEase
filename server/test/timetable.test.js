@@ -110,3 +110,28 @@ test('limits: at most 15 own subjects per semester; logged-out access refused', 
     assert.equal((await call('/api/student/my-subjects', { method: 'POST', cookie: c, body: { name: 'One too many', code: 'X1' } })).status, 400)
   })
 })
+
+test('cannot record more classes than the timetable has; attended can never exceed conducted', async () => {
+  await withServer(async ({ call, reg }) => {
+    const c = await reg('23A91A0609')
+    const m = (await j(await call('/api/student/my-subjects', { method: 'POST', cookie: c, body: { name: 'Maths' } }))).subject
+    const p = (await j(await call('/api/student/my-subjects', { method: 'POST', cookie: c, body: { name: 'Physics' } }))).subject
+    await call('/api/student/timetable', { method: 'PUT', cookie: c, body: { days: { 1: [m.id, m.id] } } }) // Monday: 2 Maths periods
+    const put = (entries, date = MONDAY) => call(`/api/student/attendance/day/${date}`, { method: 'PUT', cookie: c, body: { entries } })
+    assert.equal((await put([{ subjectId: m.id, conducted: 3, attended: 3 }])).status, 400)          // 3 > 2 periods
+    assert.equal((await put([{ subjectId: p.id, conducted: 1, attended: 1 }])).status, 400)          // not on Monday's timetable
+    assert.equal((await put([{ subjectId: m.id, conducted: 2, attended: 3 }])).status, 400)          // attended > conducted
+    assert.equal((await put([{ subjectId: m.id, conducted: 1, attended: 1.5 }])).status, 400)        // fractions
+    assert.equal((await put([{ subjectId: m.id, conducted: 1, attended: -1 }])).status, 400)         // negatives
+    assert.equal((await put([{ subjectId: m.id, conducted: '2', attended: '2' }])).status, 400)      // strings
+    assert.equal((await put([{ subjectId: m.id, conducted: 2, attended: 2 }])).status, 200)          // exactly the timetable
+    assert.equal((await put([{ subjectId: m.id, conducted: 0, attended: 0 }, { subjectId: p.id, conducted: 0, attended: 0 }])).status, 200) // "no classes"
+    // A weekday with no timetable falls back to the basic rules
+    assert.equal((await put([{ subjectId: p.id, conducted: 2, attended: 1 }], '2026-10-20')).status, 200)
+    assert.equal((await put([{ subjectId: p.id, conducted: 2, attended: 3 }], '2026-10-20')).status, 400)
+    // total per day is capped at 10
+    assert.equal((await put([{ subjectId: m.id, conducted: 6, attended: 6 }, { subjectId: p.id, conducted: 6, attended: 6 }], '2026-10-21')).status, 400)
+    const sum = await j(await call('/api/student/attendance/summary', { cookie: c }))
+    assert.ok(sum.overall.attended <= sum.overall.conducted)
+  })
+})

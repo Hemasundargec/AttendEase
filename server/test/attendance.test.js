@@ -131,8 +131,10 @@ test('summary: totals, percentages, status thresholds and the 40% subject warnin
   await withServer(async ({ call, reg, addSubject }) => {
     const m = await addSubject({ code: 'MA1' }), p = await addSubject({ code: 'PH1', name: 'Physics' })
     const cookie = await reg('23A91A0501')
-    await put(call, cookie, '2026-10-23', [{ subjectId: m.id, conducted: 10, attended: 10 }, { subjectId: p.id, conducted: 10, attended: 3 }])
-    await put(call, cookie, '2026-10-24', [{ subjectId: m.id, conducted: 10, attended: 10 }, { subjectId: p.id, conducted: 10, attended: 4 }])
+    // 4 days x (5 Maths + 5 Physics): Maths 20/20, Physics 20/7 -> 27/40 overall (a day is capped at 10 classes)
+    for (const [d, pa] of [['2026-10-21', 2], ['2026-10-22', 2], ['2026-10-23', 2], ['2026-10-24', 1]]) {
+      await put(call, cookie, d, [{ subjectId: m.id, conducted: 5, attended: 5 }, { subjectId: p.id, conducted: 5, attended: pa }])
+    }
     const s = await (await call('/api/student/attendance/summary', { cookie })).json()
     assert.equal(s.overall.attended, 27); assert.equal(s.overall.conducted, 40); assert.equal(s.overall.percentage, 67.5)
     assert.equal(s.overall.status, 'condonation')               // 65 <= 67.5 < 75

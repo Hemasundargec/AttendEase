@@ -5,7 +5,11 @@ const isWholeCount = (n) => typeof n === 'number' && Number.isInteger(n) && n >=
 
 // body: { entries: [{ subjectId, conducted, attended }] }
 // allowedSubjectIds: the ids of the student's OWN active subjects for the current semester.
-export function validateDailyEntries(body, allowedSubjectIds) {
+// periodCounts: null when the student has no timetable for this weekday, otherwise { subjectId: periods that day }.
+// With a timetable, a subject can never have more classes conducted than periods scheduled for it that day.
+export const MAX_CLASSES_PER_DAY = 10
+
+export function validateDailyEntries(body, allowedSubjectIds, { periodCounts = null } = {}) {
   const rowErrors = {}
   const rows = []
   if (!body || !Array.isArray(body.entries) || body.entries.length === 0) {
@@ -22,7 +26,13 @@ export function validateDailyEntries(body, allowedSubjectIds) {
     if (!isWholeCount(conducted)) rowErrors[id] = 'Classes conducted must be a whole number from 0 to 20.'
     else if (!isWholeCount(attended)) rowErrors[id] = 'Classes attended must be a whole number from 0 to 20.'
     else if (attended > conducted) rowErrors[id] = 'Attended cannot be more than conducted.'
-    else rows.push({ subjectId: id, conducted, attended })
+    else if (periodCounts && conducted > (periodCounts[id] || 0)) {
+      const n = periodCounts[id] || 0
+      rowErrors[id] = n === 0 ? 'This subject is not on your timetable for this day, so no class can be counted.' : `Your timetable has only ${n} class${n === 1 ? '' : 'es'} of this subject on this day.`
+    } else rows.push({ subjectId: id, conducted, attended })
+  }
+  if (Object.keys(rowErrors).length === 0 && rows.reduce((t, r) => t + r.conducted, 0) > MAX_CLASSES_PER_DAY) {
+    return { ok: false, message: `A day can have at most ${MAX_CLASSES_PER_DAY} classes in total.`, rowErrors, rows }
   }
   const ok = Object.keys(rowErrors).length === 0
   return { ok, message: ok ? '' : 'Please fix the highlighted subjects.', rowErrors, rows }
