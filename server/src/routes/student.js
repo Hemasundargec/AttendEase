@@ -11,6 +11,8 @@ import { validateDailyEntries, validateDateParam, parseTarget } from '../validat
 import { validateTodo } from '../validators/todo.js'
 import { validateMySubject, autoCode, validateTimetable } from '../validators/mySubject.js'
 import { DuplicateSubjectError } from '../repos/errors.js'
+import { buildSheet } from '../lib/sheet.js'
+import { buildWorkbook } from '../lib/sheetXlsx.js'
 
 // Every route here is student-only. The student is ALWAYS the logged-in user (req.user);
 // no route accepts a user id from the browser, so one student cannot reach another's records.
@@ -163,6 +165,43 @@ export function studentRoutes({ users, subjects, attendance, todos, timetable, m
       entries: entries.slice(0, limit).map((e) => ({ date: e.date, code: names.get(e.subjectId).code, name: names.get(e.subjectId).name, conducted: e.conducted, attended: e.attended })),
       total: entries.length,
     })
+  })
+
+  // ---- Yearly attendance sheet (shown in the app and downloadable as Excel) ----
+  const sheetYear = (req) => {
+    const nowYear = Number(todayInIndia(now()).slice(0, 4))
+    if (req.query.year === undefined || req.query.year === '') return nowYear
+    return /^\d{4}$/.test(String(req.query.year)) && Number(req.query.year) >= 2000 && Number(req.query.year) <= nowYear + 1 ? Number(req.query.year) : null
+  }
+  const allEntries = async (userId) => {
+    const sems = await attendance.semestersWithEntries(userId)
+    return (await Promise.all(sems.map((n) => attendance.forSemester(userId, n)))).flat()
+  }
+  router.get('/attendance/sheet', async (req, res) => {
+    const year = sheetYear(req); if (!year) return res.status(400).json({ message: 'Choose a valid year.' })
+    const entries = await allEntries(req.user.id)
+    const years = [...new Set([...entries.map((e) => Number(e.date.slice(0, 4))), Number(todayInIndia(now()).slice(0, 4))])].sort((a, b) => b - a)
+    res.json({ ...buildSheet(entries, year), years })
+  })
+  router.get('/attendance/sheet.xlsx', async (req, res) => {
+    const year = sheetYear(req); if (!year) return res.status(400).json({ message: 'Choose a valid year.' })
+    const entries = await allEntries(req.user.id)
+    const sheet = buildSheet(entries, year)
+    const sems = [...new Set(entries.map((e) => e.semester))]
+    const byId = new Map()
+    for (const n of sems) for (const sub of await subjects.forStudentSemester(req.user, n)) byId.set(sub.id, sub)
+    const per = new Map()
+    for (const e of entries) {
+      if (!e.date.startsWith(`${year}-`) || !byId.has(e.subjectId)) continue
+      const row = per.get(e.subjectId) || { code: byId.get(e.subjectId).code, name: byId.get(e.subjectId).name, conducted: 0, attended: 0 }
+      row.conducted += e.conducted; row.attended += e.attended; per.set(e.subjectId, row)
+    }
+    const wb = await buildWorkbook({ user: req.user, sheet, subjectRows: [...per.values()].sort((a, b) => a.code.localeCompare(b.code)) })
+    const safeRoll = String(req.user.rollNumber).replace(/[^A-Za-z0-9_-]/g, '')
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    res.setHeader('Content-Disposition', `attachment; filename="AttendEase-attendance-${year}-${safeRoll}.xlsx"`)
+    res.setHeader('Cache-Control', 'no-store')
+    await wb.xlsx.write(res); res.end()
   })
 
   router.get('/semesters', async (req, res) => {

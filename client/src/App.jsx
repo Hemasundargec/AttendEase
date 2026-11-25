@@ -12,6 +12,7 @@ import MarkAttendance from './pages/MarkAttendance.jsx'
 import ShowAttendance from './pages/ShowAttendance.jsx'
 import Predict from './pages/Predict.jsx'
 import Statistics from './pages/Statistics.jsx'
+import AttendanceSheet from './pages/AttendanceSheet.jsx'
 import Todos from './pages/Todos.jsx'
 import Timetable from './pages/Timetable.jsx'
 import Profile from './pages/Profile.jsx'
@@ -32,6 +33,7 @@ export default function App() {
           <Route path="attendance/mark" element={<MarkAttendance />} />
           <Route path="attendance/predict" element={<Predict />} />
           <Route path="statistics" element={<Statistics />} />
+          <Route path="attendance/sheet" element={<AttendanceSheet />} />
           <Route path="todos" element={<Todos />} />
           <Route path="timetable" element={<Timetable />} />
           <Route path="profile" element={<Profile />} />

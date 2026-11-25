@@ -134,3 +134,6 @@ then restart `npm run dev:server` and `npm run dev:client`. If `git pull` says y
 - Attended can never be more than conducted; counts are whole numbers.
 - If your timetable has classes for that weekday, a subject cannot have more classes conducted than periods scheduled, and a subject not on that day's timetable cannot be counted.
 - At most 10 classes in total per day; no future dates.
+
+## Yearly attendance sheet + Excel download
+**Sheet** in the menu shows the whole year: dates 1–31 down, January–December across. Marks: `P` attended all classes that day, `Pt` attended some, `A` absent, `H` holiday / no classes (Sundays included), blank = not entered. Cards show total present / partial / absent / holiday. **Download Excel** gives the same sheet (totals are live formulas) plus a Subject-wise tab. API: `GET /api/student/attendance/sheet?year=` and `/sheet.xlsx?year=`.

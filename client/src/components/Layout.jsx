@@ -46,6 +46,7 @@ export default function Layout() {
                 <NavLink to="/attendance/mark">Mark</NavLink>
                 <NavLink to="/attendance" end>Attendance</NavLink>
                 <NavLink to="/attendance/predict">Prediction</NavLink>
+                <NavLink to="/attendance/sheet">Sheet</NavLink>
                 <NavLink to="/statistics">Statistics</NavLink>
                 <NavLink to="/todos">To-do</NavLink>
                 <NavLink to="/profile">Profile</NavLink>

@@ -159,7 +159,7 @@ export function createApp({
   if (distDir && existsSync(distDir)) {
     // Pages that exist only inside the React app. A refresh or bookmark on these must load the app shell,
     // not a 404. Anything NOT listed here and not a real file still gets a true 404.
-    const APP_ROUTES = ['/dashboard', '/attendance', '/attendance/mark', '/attendance/predict', '/statistics', '/todos', '/profile', '/timetable', '/admin']
+    const APP_ROUTES = ['/dashboard', '/attendance', '/attendance/mark', '/attendance/predict', '/attendance/sheet', '/statistics', '/todos', '/profile', '/timetable', '/admin']
     app.get(APP_ROUTES, (_req, res) => { res.set('Cache-Control', 'no-cache'); res.sendFile(join(distDir, 'index.html')) })
     app.use(
       express.static(distDir, {

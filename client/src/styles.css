@@ -233,3 +233,25 @@ details.day ul { margin: 8px 0 0; padding-left: 1.2em; }
 .tick input { width: 28px; height: 28px; accent-color: var(--mocha); flex: none; }
 .tick input:disabled + span { opacity: 0.55; }
 @media (min-width: 640px) { .tick-row { grid-template-columns: 1fr auto auto; align-items: center; gap: 24px; } }
+
+/* Yearly attendance sheet */
+.sheet-tiles { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr)); margin: 14px 0 6px; }
+.sheet-tile { padding: 14px 16px; }
+.sheet-num { font-family: 'Space Grotesk Variable', system-ui, sans-serif; font-size: 2rem; font-weight: 700; line-height: 1.1; }
+.sheet-select { min-height: 44px; border-radius: 10px; border: 2px solid var(--platinum); background: #fff; color: var(--mocha-deep); font: inherit; padding: 0 12px; }
+.sheet-legend { padding: 10px 14px; display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 0.95rem; margin: 6px 0 12px; }
+.sheet-wrap { max-height: 70vh; overflow: auto; padding: 0; }
+.sheet-table { border-collapse: separate; border-spacing: 0; width: 100%; min-width: 860px; font-size: 0.95rem; color: var(--mocha-deep); }
+.sheet-table th, .sheet-table td { padding: 7px 10px; text-align: center; border-bottom: 1px solid #e3e0e0; }
+.sheet-table thead th { position: sticky; top: 0; z-index: 2; background: var(--mocha); color: #fff; font-weight: 700; }
+.sheet-table tbody th { position: sticky; left: 0; z-index: 1; background: #f3f1f1; font-weight: 700; }
+.sheet-table thead th:first-child { left: 0; z-index: 3; text-align: left; white-space: nowrap; }
+.sheet-table tbody tr:nth-child(even) td { background: #faf9f9; }
+.sheet-na { color: #6b6b6b; background: #eeeeee !important; }
+.m-P { color: #1E5B2F; font-weight: 700; }
+.m-Pt { color: #7A4B00; font-weight: 700; }
+.m-A { color: #8C1D2F; font-weight: 700; }
+.m-H { color: #3E2B1D; font-weight: 700; }
+td.m-H { background: #ece8f5 !important; }
+.sheet-tiles > .card { margin: 0; align-self: stretch; }
+.sheet-table td { background: #fff; }

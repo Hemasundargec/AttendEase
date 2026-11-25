@@ -28,6 +28,7 @@ export const pages = {
   '/attendance': { title: 'Show Attendance | AttendEase', description: 'Your subject-wise attendance.', noindex: true },
   '/attendance/mark': { title: 'Mark Attendance | AttendEase', description: 'Enter your daily attendance.', noindex: true },
   '/attendance/predict': { title: 'Prediction | AttendEase', description: 'Safe-leave and recovery calculator.', noindex: true },
+  '/attendance/sheet': { title: 'Attendance Sheet | AttendEase', description: 'Your yearly attendance sheet.', noindex: true },
   '/statistics': { title: 'Statistics | AttendEase', description: 'Your attendance statistics.', noindex: true },
   '/timetable': { title: 'My Timetable | AttendEase', description: 'Your subjects and weekly timetable.', noindex: true },
   '/todos': { title: 'To-do List | AttendEase', description: 'Your tasks.', noindex: true },
