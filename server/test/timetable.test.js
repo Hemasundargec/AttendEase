@@ -20,7 +20,7 @@ async function withServer(fn) {
     fetch(base + path, { method, headers: { 'Content-Type': 'application/json', ...(cookie ? { Cookie: cookie } : {}) }, body: body === undefined ? undefined : JSON.stringify(body) })
   const reg = async (roll) => call('/api/auth/register', { method: 'POST', body: { name: 'Stu ' + roll, rollNumber: roll, college: 'SRGEC', regulation: 'R23', branch: 'CSE', year: 2, semester: 3, password: 'Sunrise2026', confirmPassword: 'Sunrise2026' } })
     .then((r) => r.headers.getSetCookie().find((c) => c.startsWith('attendease_session=')).split(';')[0])
-  try { await fn({ call, reg, subjects }) } finally { server.close() }
+  try { await fn({ call, reg, subjects, users }) } finally { server.close() }
 }
 const j = (r) => r.json()
 
@@ -133,5 +133,23 @@ test('cannot record more classes than the timetable has; attended can never exce
     assert.equal((await put([{ subjectId: m.id, conducted: 6, attended: 6 }, { subjectId: p.id, conducted: 6, attended: 6 }], '2026-10-21')).status, 400)
     const sum = await j(await call('/api/student/attendance/summary', { cookie: c }))
     assert.ok(sum.overall.attended <= sum.overall.conducted)
+  })
+})
+
+test("an administrator can manage shared subjects but cannot edit or see a student's private subject", async () => {
+  await withServer(async ({ call, reg, users }) => {
+    const { hashPassword } = await import('../src/auth/password.js')
+    await users.create({ name: 'Admin', rollNumber: 'ADMIN01', college: 'SRGEC', role: 'admin', passwordHash: await hashPassword('Adminpass2026') })
+    const login = await call('/api/auth/login', { method: 'POST', body: { college: 'SRGEC', rollNumber: 'ADMIN01', password: 'Adminpass2026' } })
+    const admin = login.headers.getSetCookie().find((c) => c.startsWith('attendease_session=')).split(';')[0]
+    const c = await reg('23A91A0610')
+    const mine = (await j(await call('/api/student/my-subjects', { method: 'POST', cookie: c, body: { name: 'Maths' } }))).subject
+    const patch = await call(`/api/admin/subjects/${mine.id}`, { method: 'PATCH', cookie: admin, body: { name: 'Hacked' } })
+    assert.equal(patch.status, 404)
+    assert.equal((await j(await call('/api/admin/subjects', { cookie: admin }))).subjects.length, 0)
+    const made = await call('/api/admin/subjects', { method: 'POST', cookie: admin, body: { college: 'SRGEC', regulation: 'R23', branch: 'CSE', year: 2, semester: 3, code: 'CS301', name: 'Algorithms' } })
+    assert.equal(made.status, 201)
+    const shared = (await j(await call('/api/student/subjects', { cookie: c }))).subjects
+    assert.deepEqual(shared.map((s) => [s.name, s.mine]).sort(), [['Algorithms', false], ['Maths', true]])
   })
 })

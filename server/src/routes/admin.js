@@ -42,7 +42,7 @@ export function adminRoutes({ users, subjects, jwtSecret }) {
 
   router.patch('/subjects/:id', async (req, res) => {
     const existing = await subjects.findById(req.params.id)
-    if (!existing) return res.status(404).json({ message: 'Subject not found.' })
+    if (!existing || existing.ownerId) return res.status(404).json({ message: 'Subject not found.' }) // students' own subjects are private
     // Year and semester travel together because one is validated against the other.
     const merged = { ...existing, ...req.body }
     const { ok, fieldErrors, value } = validateSubject({ ...merged }, { partial: false })

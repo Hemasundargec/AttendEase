@@ -1,0 +1,26 @@
+# Render blueprint: one web service serves the API and the built site.
+services:
+  - type: web
+    name: attendease
+    runtime: node
+    plan: free
+    buildCommand: npm run install:all && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: 22
+      - key: NODE_ENV
+        value: production
+      - key: MONGODB_URI
+        sync: false          # paste your Atlas connection string in the Render dashboard
+      - key: JWT_SECRET
+        generateValue: true
+      - key: FORM_SECRET
+        generateValue: true
+      - key: VITE_SITE_URL
+        sync: false          # e.g. https://attendease.onrender.com (needed at build time for sitemap/meta tags)
+      - key: SITE_URL
+        sync: false          # same URL; used in reminder email links
+      - key: CANONICAL_HOST
+        sync: false          # same host without https://, e.g. attendease.onrender.com
