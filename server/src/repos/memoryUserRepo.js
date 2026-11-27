@@ -9,6 +9,7 @@ export function createMemoryUserRepo() {
 
   return {
     kind: 'memory',
+    _store: users, // used only by the local-development file persistence
     async findByRoll(college, rollNumber) {
       return publicCopy([...users.values()].find((u) => key(u.college, u.rollNumber) === key(college, rollNumber)))
     },

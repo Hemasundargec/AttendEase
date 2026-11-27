@@ -4,6 +4,7 @@ export function createMemoryTimetableRepo() {
   const key = (userId, semester) => `${userId}:${semester}`
   return {
     kind: 'memory',
+    _store: rows, // used only by the local-development file persistence
     async get(userId, semester) { const r = rows.get(key(userId, semester)); return r ? JSON.parse(JSON.stringify(r.days)) : null },
     async set(userId, semester, days) { rows.set(key(userId, semester), { days: JSON.parse(JSON.stringify(days)) }); return days },
   }

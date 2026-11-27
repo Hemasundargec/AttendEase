@@ -4,6 +4,7 @@ export function createMemoryReminderLogRepo() {
   const key = (u, d, s) => `${u}|${d}|${s}`
   return {
     kind: 'memory',
+    _store: rows, // used only by the local-development file persistence
     async tryClaim(userId, date, slot) {
       const k = key(userId, date, slot)
       if (rows.has(k)) return false

@@ -137,3 +137,8 @@ then restart `npm run dev:server` and `npm run dev:client`. If `git pull` says y
 
 ## Yearly attendance sheet + Excel download
 **Sheet** in the menu shows the whole year: dates 1–31 down, January–December across. Marks: `P` attended all classes that day, `Pt` attended some, `A` absent, `H` holiday / no classes (Sundays included), blank = not entered. Cards show total present / partial / absent / holiday. **Download Excel** gives the same sheet (totals are live formulas) plus a Subject-wise tab. API: `GET /api/student/attendance/sheet?year=` and `/sheet.xlsx?year=`.
+
+## Local mode keeps your accounts
+Without `MONGODB_URI`, accounts and attendance are saved to `server/data/dev-db.json` (never committed), so restarting the server no longer deletes accounts. To start clean, stop the server and delete that file. `DEV_PERSIST=off` goes back to memory-only. This is for development; use MongoDB (see DEPLOY.md) for real students.
+
+**"Could not log in" checklist:** (1) both `npm run dev:server` and `npm run dev:client` are running; (2) open http://localhost:5173; (3) `http://localhost:4000/api/health` shows `"build":"v0.5"`; (4) after 10 wrong passwords for one roll number, wait 15 minutes (other students are not affected).

@@ -7,6 +7,7 @@ export function createMemoryTodoRepo() {
   const mine = (userId, id) => { const t = todos.get(String(id)); return t && t.userId === userId ? t : null }
   return {
     kind: 'memory',
+    _store: todos, // used only by the local-development file persistence
     async create(userId, data) {
       const now = new Date()
       const t = { id: randomUUID(), userId, completed: false, completedAt: null, createdAt: now, updatedAt: now, ...data }

@@ -31,7 +31,7 @@ export function createApp({
   jwtSecret,
   allowedOrigins = [],
   loginLimit = { windowMs: 15 * 60 * 1000, max: 10 },
-  registerLimit = { windowMs: 60 * 60 * 1000, max: 10 },
+  registerLimit = { windowMs: 60 * 60 * 1000, max: 100 },
   distDir,
   formSecret,
   isProduction = false,
@@ -83,7 +83,7 @@ export function createApp({
   app.use('/api', sameOriginGuard(allowedOrigins, { isProduction }))
 
   // ---- API ---------------------------------------------------------------------------
-  app.get('/api/health', (_req, res) => res.json({ status: 'ok', storage: storage?.kind ?? 'none', build: 'login-fix-2' }))
+  app.get('/api/health', (_req, res) => res.json({ status: 'ok', storage: storage?.kind ?? 'none', build: 'v0.5' }))
 
   app.get('/api/form-token', (_req, res) => {
     res.set('Cache-Control', 'no-store')

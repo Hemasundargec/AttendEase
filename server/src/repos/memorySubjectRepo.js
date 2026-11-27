@@ -8,6 +8,7 @@ export function createMemorySubjectRepo() {
   const copy = (s) => (s ? { ...s } : null)
   return {
     kind: 'memory',
+    _store: subjects, // used only by the local-development file persistence
     async create(data) {
       if ([...subjects.values()].some((s) => sameSlot(s, data))) throw new DuplicateSubjectError()
       const now = new Date()

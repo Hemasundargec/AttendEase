@@ -1,5 +1,5 @@
 import { Router } from 'express'
-import rateLimit from 'express-rate-limit'
+import rateLimit, { ipKeyGenerator } from 'express-rate-limit'
 import { hashPassword, verifyPassword, verifyAgainstDummy } from '../auth/password.js'
 import { COOKIE_NAME, cookieOptions, signSession } from '../auth/session.js'
 import { validateRegistration, validateLogin, validatePasswordChange } from '../validators/auth.js'
@@ -14,9 +14,16 @@ export const publicUser = (u) => ({
 
 export function authRoutes({ users, jwtSecret, isProduction, loginLimit, registerLimit }) {
   const router = Router()
-  const limiter = (opts, message) => rateLimit({ ...opts, standardHeaders: true, legacyHeaders: false, message: { message } })
-  const loginLimiter = limiter(loginLimit, 'Too many login attempts. Please wait a few minutes and try again.')
-  const registerLimiter = limiter(registerLimit, 'Too many sign-up attempts. Please try again later.')
+  const limiter = (opts, message, extra = {}) => rateLimit({ ...opts, standardHeaders: true, legacyHeaders: false, message: { message }, ...extra })
+  const rollKey = (req) => String(req.body?.rollNumber ?? '').trim().toUpperCase().slice(0, 40)
+  // Only FAILED logins count. Many students share one college Wi-Fi address, so successful logins must never
+  // use up a shared allowance. The strict limit is per roll number (stops password guessing on one account);
+  // the looser per-address limit stops one machine trying many accounts.
+  const loginTooMany = 'Too many incorrect login attempts. Please wait 15 minutes and try again.'
+  const loginLimiter = limiter(loginLimit, loginTooMany, { skipSuccessfulRequests: true, keyGenerator: (req) => `${ipKeyGenerator(req.ip)}|${rollKey(req)}` })
+  const loginIpLimiter = limiter({ ...loginLimit, max: loginLimit.max * 10 }, loginTooMany, { skipSuccessfulRequests: true, keyGenerator: (req) => ipKeyGenerator(req.ip) })
+  // Only successful sign-ups count (a whole class may register from one address).
+  const registerLimiter = limiter(registerLimit, 'Too many accounts were created from this network. Please try again later.', { skipFailedRequests: true, keyGenerator: (req) => ipKeyGenerator(req.ip) })
   const setSession = (res, user) => res.cookie(COOKIE_NAME, signSession(jwtSecret, user), cookieOptions(isProduction))
 
   router.post('/register', registerLimiter, async (req, res) => {
@@ -38,7 +45,7 @@ export function authRoutes({ users, jwtSecret, isProduction, loginLimit, registe
     }
   })
 
-  router.post('/login', loginLimiter, async (req, res) => {
+  router.post('/login', loginIpLimiter, loginLimiter, async (req, res) => {
     const { ok, value } = validateLogin(req.body)
     const fail = () => res.status(401).json({ message: 'Incorrect roll number or password.' })
     if (!ok) return fail()

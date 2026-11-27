@@ -7,6 +7,7 @@ export function createMemoryAttendanceRepo() {
   const copy = (e) => ({ ...e })
   return {
     kind: 'memory',
+    _store: entries, // used only by the local-development file persistence
     async upsertMany(userId, semester, date, rows) {
       const now = new Date()
       return rows.map((r) => {

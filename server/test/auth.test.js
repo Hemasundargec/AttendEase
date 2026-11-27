@@ -272,3 +272,25 @@ test('production: loopback origin is NOT trusted, but X-Forwarded-Host and ALLOW
     assert.notEqual(allowed.status, 403)
   })
 })
+
+test('shared college network: successful logins never use up the allowance; one student typing wrongly does not lock others', async () => {
+  await withServer({ loginLimit: { windowMs: 60_000, max: 3 } }, async ({ base }) => {
+    const a = goodReg(), b = { ...goodReg(), rollNumber: '23A91A0777', name: 'Other Student' }
+    await json(base, '/api/auth/register', a); await json(base, '/api/auth/register', b)
+    // 12 successful logins from the same address: far beyond max 3 and still fine
+    for (let i = 0; i < 12; i++) assert.equal((await json(base, '/api/auth/login', { college: a.college, rollNumber: a.rollNumber, password: a.password })).status, 200)
+    // Student A mistypes until A is limited ...
+    for (let i = 0; i < 3; i++) await json(base, '/api/auth/login', { college: a.college, rollNumber: a.rollNumber, password: 'Wrong2026x' })
+    assert.equal((await json(base, '/api/auth/login', { college: a.college, rollNumber: a.rollNumber, password: 'Wrong2026x' })).status, 429)
+    // ... and student B on the very same address can still log in
+    assert.equal((await json(base, '/api/auth/login', { college: b.college, rollNumber: b.rollNumber, password: b.password })).status, 200)
+  })
+})
+
+test('register: a whole class can sign up from one address; invalid attempts do not use the allowance', async () => {
+  await withServer({ registerLimit: { windowMs: 60_000, max: 3 } }, async ({ base }) => {
+    for (let i = 0; i < 6; i++) assert.equal((await json(base, '/api/auth/register', { ...goodReg(), password: 'x', confirmPassword: 'x', rollNumber: `23A91A08${i}0` })).status, 400)
+    for (let i = 0; i < 3; i++) assert.equal((await json(base, '/api/auth/register', { ...goodReg(), rollNumber: `23A91A09${i}0` })).status, 201)
+    assert.equal((await json(base, '/api/auth/register', { ...goodReg(), rollNumber: '23A91A0990' })).status, 429)
+  })
+})

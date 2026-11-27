@@ -11,6 +11,7 @@ import { createMemorySubjectRepo } from './repos/memorySubjectRepo.js'
 import { createMongoAttendanceRepo } from './repos/mongoAttendanceRepo.js'
 import { createMemoryAttendanceRepo } from './repos/memoryAttendanceRepo.js'
 import { createMongoTodoRepo } from './repos/mongoTodoRepo.js'
+import { attachFilePersistence } from './lib/devPersistence.js'
 import { createMemoryTodoRepo } from './repos/memoryTodoRepo.js'
 import { createMongoTimetableRepo } from './repos/mongoTimetableRepo.js'
 import { createMemoryTimetableRepo } from './repos/memoryTimetableRepo.js'
@@ -75,7 +76,13 @@ if (process.env.MONGODB_URI) {
   todos = createMemoryTodoRepo()
   timetable = createMemoryTimetableRepo()
   reminderLogs = createMemoryReminderLogRepo()
-  console.warn('Development mode: user accounts are kept in memory and are lost when the server restarts.')
+  if (process.env.DEV_PERSIST === 'off') {
+    console.warn('Development mode: DEV_PERSIST=off, accounts are kept in memory and are lost when the server restarts.')
+  } else {
+    const dbFile = join(here, '..', 'data', 'dev-db.json')
+    const n = attachFilePersistence(dbFile, { users, subjects, attendance, todos, timetable, reminderLogs })
+    console.warn(`Development mode: accounts and attendance are saved to ${dbFile} (${n} records loaded). Set MONGODB_URI for a real database.`)
+  }
   console.warn(`MONGODB_URI not set: development mode, signups are written to ${file}`)
 }
 
